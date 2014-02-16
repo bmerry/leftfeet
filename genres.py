@@ -17,6 +17,7 @@ Questions:
     - How many entries should be made? Specify a count or duration?
     - How should frequencies be set? Per genre or at a higher level?
     - What settings should be presented in the plugin? Should they pop up on use or just be plugin settings?
+'''
 
 OPEN = -1
 BEGINNER = 0
@@ -54,7 +55,7 @@ class Genre(object):
         self.level = level
         self.group = group
         self.energy = energy
-        self.freq = 0
+        self.default_freq = 20.0
 
     def __str__(self):
         return self.name
@@ -73,12 +74,6 @@ genres = [
     Genre('viennese waltz', OPEN, BALLROOM, 1),
     Genre('argentine tango', OPEN, OTHER)
 ]
-tfreq = 0.0
-for g in genres:
-    g.freq = random.uniform(0.8, 1.0)
-    tfreq += g.freq
-for g in genres:
-    g.freq /= tfreq
 
 repel = {}
 for i in genres:
@@ -107,25 +102,36 @@ def score(sequence):
             ans += repel[(sequence[j], sequence[i])] / dist2
     return ans
 
-def next_genre(sequence):
+def next_genre(sequence, freqs):
     target = {}
     for g in genres:
-        target[g] = (len(sequence) + 1) * -g.freq
+        target[g] = (len(sequence) + 1) * -freqs[g]
     for s in sequence:
         target[s] += 1
     return pick_smallest(target.items())
 
-sequence = []
-for i in range(50):
-    g = next_genre(sequence)
-    scores = []
-    for i in range(len(sequence) + 1):
-        sequence.insert(i, g)
-        scores.append((i, score(sequence)))
-        assert sequence[i] == g
-        del sequence[i]
-    place = pick_smallest(scores)
-    sequence.insert(place, g)
+def generate_sequence(freqs):
+    tfreq = sum(freqs.values())
+    for g in genres:
+        freqs[g] /= tfreq
 
-for g in sequence:
-    print(g)
+    sequence = []
+    for i in range(50):
+        g = next_genre(sequence, freqs)
+        scores = []
+        for i in range(len(sequence) + 1):
+            sequence.insert(i, g)
+            scores.append((i, score(sequence)))
+            assert sequence[i] == g
+            del sequence[i]
+        place = pick_smallest(scores)
+        sequence.insert(place, g)
+    return sequence
+
+if __name__ == '__main__':
+    freqs = {}
+    for g in genres:
+        freqs[g] = random.uniform(0.8, 1.0)
+    sequence = generate_sequence(freqs)
+    for g in sequence:
+        print(g)
