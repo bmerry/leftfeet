@@ -1,7 +1,9 @@
 from gi.repository import GObject, Gio, Gtk, RB, Peas
 import random
-import genres
 import gettext
+import genres
+import generator
+
 gettext.install('rhythmbox', RB.locale_dir())
 
 class LeftFeetPlugin(GObject.Object, Peas.Activatable):
@@ -42,7 +44,7 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         shell = self.object
         songs = self.get_songs(shell)
         freqs = {g: self.adjustments[g].get_value() for g in genres.genres}
-        sequence = genres.generate_sequence(freqs)
+        sequence = generator.generate_sequence(freqs)
         for g in sequence:
             if g in songs and songs[g]:
                 entry = random.choice(songs[g])
