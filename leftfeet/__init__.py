@@ -17,6 +17,8 @@
 from gi.repository import GObject, Gio, Gtk, RB, Peas
 import random
 import gettext
+import anydbm
+
 import genres
 import generator
 
@@ -59,6 +61,9 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
             entry = lib.get_next_from_entry(entry)
         return by_genre
 
+    def freq_changed(self, adj, genre):
+        self.settings['freq.' + genre.name] = repr(adj.get_value())
+
     def generate(self):
         '''
         Generate the list of songs and enqueue them to the playlist.
@@ -97,8 +102,15 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         table = Gtk.Table(len(genres.genres), 2)
         self.adjustments = {}
         for (i, g) in enumerate(genres.genres):
+            key = 'freq.' + g.name
+            if self.settings.has_key(key):
+                freq = float(self.settings[key])
+            else:
+                freq = g.default_freq
+
             table.attach(Gtk.Label(_(g.name)), 0, 1, i, i + 1, 0)
-            adj = Gtk.Adjustment(g.default_freq, 0.0, 100.0, 1.0, 10.0)
+            adj = Gtk.Adjustment(freq, 0.0, 100.0, 1.0, 10.0)
+            adj.connect('value-changed', self.freq_changed, g)
             scale = Gtk.HScale()
             scale.set_adjustment(adj)
             scale.set_value_pos(Gtk.PositionType.LEFT)
@@ -121,10 +133,13 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         app.add_plugin_menu_item('tools', 'leftfeet-generate',
                 Gio.MenuItem.new(label = _("Generate playlist"), detailed_action = 'app.leftfeet-generate'))
 
+        self.settings = anydbm.open(RB.find_user_data_file('leftfeet.db'), 'c')
+
     def do_deactivate(self):
         shell = self.object
         app = shell.props.application
 
+        self.settings.close()
         app.remove_plugin_menu_item('tools', 'leftfeet-generate')
         app.remove_action('leftfeet-generate')
         self.destroy_window()
