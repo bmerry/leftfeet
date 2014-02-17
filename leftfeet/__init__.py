@@ -1,3 +1,19 @@
+# LeftFeet: generates a Rhythmbox playlist for social dancing
+# Copyright (C) 2014  Bruce Merry <bmerry@users.sourceforge.net>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 from gi.repository import GObject, Gio, Gtk, RB, Peas
 import random
 import gettext
@@ -44,6 +60,13 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         return by_genre
 
     def generate(self):
+        '''
+        Generate the list of songs and enqueue them to the playlist.
+
+        @todo More intelligent random choice (consider star ratings etc)
+        @todo Avoid picking songs that have been played recently
+        @todo Take a parameter for the number of songs to generate
+        '''
         shell = self.object
         songs = self.get_songs(shell)
         freqs = {g: self.adjustments[g].get_value() for g in genres.genres}
@@ -53,6 +76,7 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
             if g in songs and songs[g]:
                 entry = random.choice(songs[g])
                 shell.props.queue_source.add_entry(entry, -1)
+                # Avoid picking it again
                 songs[g].remove(entry)
 
     def generate_response(self, dialog, response):
