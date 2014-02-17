@@ -81,7 +81,7 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
             table.attach(scale, 1, 2, i, i + 1, Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.FILL)
             self.adjustments[g] = adj
         self.window.get_content_area().add(table)
-        self.window.set_default_size(500, 1)
+        self.window.set_default_size(500, -1)
         self.window.show_all()
         self.window.connect('response', self.generate_response)
         self.window.run()
