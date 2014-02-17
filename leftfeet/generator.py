@@ -28,8 +28,7 @@ def score(sequence):
     ans = 0
     for i in range(1, len(sequence)):
         for j in range(max(0, i - WINDOW), i):
-            dist2 = float(i - j)**2
-            ans += genres.repel[(sequence[j], sequence[i])] / dist2
+            ans += genres.repel[(sequence[j], sequence[i])] / (i - j)
     return ans
 
 def next_genre(sequence, freqs):
