@@ -28,9 +28,12 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         Returns a dictionary of lists, indexed by genre object.
         '''
         lib = shell.props.library_source.props.base_query_model
-        it = lib.get_iter_first()
-        entry = lib.iter_to_entry(it)
         by_genre = {}
+
+        it = lib.get_iter_first()
+        if it is None:
+            return by_genre # Empty library
+        entry = lib.iter_to_entry(it)
         for g in genres.genres:
             by_genre[g] = []
         while entry:
