@@ -75,8 +75,8 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         shell = self.object
         songs = self.get_songs(shell)
         freqs = {g: self.adjustments[g].get_value() for g in genres.genres}
-        # TODO: make the number of songs a parameter
-        sequence = generator.generate_sequence(50, freqs)
+        num_entries = int(self.num_entries.get_value())
+        sequence = generator.generate_sequence(num_entries, freqs)
         for g in sequence:
             if g in songs and songs[g]:
                 entry = random.choice(songs[g])
@@ -87,7 +87,8 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
     def generate_response(self, dialog, response):
         if response == Gtk.ResponseType.OK:
             self.generate()
-        self.adjustments = {}
+        self.adjustments = None
+        self.num_entries = None
         dialog.destroy()
 
     def generate_action(self, action, parameter, shell):
@@ -99,6 +100,14 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
                     Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
                     Gtk.STOCK_OK, Gtk.ResponseType.OK
                 ])
+
+        vbox = Gtk.VBox()
+        self.window.get_content_area().add(vbox)
+
+        freq_frame = Gtk.Frame()
+        freq_frame.set_label('Relative Frequency')
+        vbox.pack_start(freq_frame, False, False, 0)
+
         table = Gtk.Table(len(genres.genres), 2)
         self.adjustments = {}
         for (i, g) in enumerate(genres.genres):
@@ -116,10 +125,22 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
             scale.set_value_pos(Gtk.PositionType.LEFT)
             table.attach(scale, 1, 2, i, i + 1, Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.FILL)
             self.adjustments[g] = adj
-        self.window.get_content_area().add(table)
+        freq_frame.add(table)
+
+        hbox = Gtk.HBox()
+        vbox.pack_start(hbox, False, False, 0)
+        hbox.pack_start(Gtk.Label(_('Entries')), False, False, 0)
+        self.num_entries = Gtk.Adjustment(100, 0, 400, 1, 10)
+        spinner = Gtk.SpinButton()
+        spinner.set_adjustment(self.num_entries)
+        spinner.set_digits(0)
+        spinner.set_value(self.num_entries.get_value())
+        hbox.pack_start(spinner, True, True, 0)
+
         self.window.set_default_size(500, -1)
         self.window.show_all()
         self.window.connect('response', self.generate_response)
+        self.window.connect('delete-event', self.generate_response, None)
         self.window.run()
 
     def do_activate(self):
