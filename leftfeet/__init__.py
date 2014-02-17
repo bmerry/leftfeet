@@ -44,7 +44,8 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         shell = self.object
         songs = self.get_songs(shell)
         freqs = {g: self.adjustments[g].get_value() for g in genres.genres}
-        sequence = generator.generate_sequence(freqs)
+        # TODO: make the number of songs a parameter
+        sequence = generator.generate_sequence(50, freqs)
         for g in sequence:
             if g in songs and songs[g]:
                 entry = random.choice(songs[g])

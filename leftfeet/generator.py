@@ -39,13 +39,15 @@ def next_genre(sequence, freqs):
         target[s] += 1
     return pick_smallest(target.items())
 
-def generate_sequence(freqs):
+def generate_sequence(num_songs, freqs):
+    freqs = dict(freqs) # Make a copy to avoid modifying the caller's copy
+    # Normalize the frequencies to sum to 1
     tfreq = sum(freqs.values())
     for g in genres.genres:
         freqs[g] /= tfreq
 
     sequence = []
-    for i in range(50):
+    for i in range(num_songs):
         g = next_genre(sequence, freqs)
         scores = []
         for i in range(len(sequence) + 1):
@@ -61,6 +63,6 @@ if __name__ == '__main__':
     freqs = {}
     for g in genres.genres:
         freqs[g] = random.uniform(0.8, 1.0)
-    sequence = generate_sequence(freqs)
+    sequence = generate_sequence(50, freqs)
     for g in sequence:
         print(g)
