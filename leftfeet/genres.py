@@ -25,20 +25,32 @@
 # SOFTWARE.
 
 '''
-Questions:
-    - Should Tango and Argentine Tango be classified separately?
-    - Should Slow Fox be split out?
-    - Should Viennese Waltz be classed as open?
-    - Should Samba and Salsa be classed as similar
-    - Should line dances be handled here at all?
-    - Any other genres (Paso Doble?)
-    - Are there special rules for the start (beginner-friendly?) and end (waltz?)
-    - How should songs be picked within a genre (time since last use, star ratings)?
-    - How should multi-genre songs be handled?
-    - Should low-rated songs be picked randomly (but less often), or just not at all?
-    - How many entries should be made? Specify a count or duration?
-    - How should frequencies be set? Per genre or at a higher level?
-    - What settings should be presented in the plugin? Should they pop up on use or just be plugin settings?
+Contains site-local configuration of the available genres.
+
+.. data:: genres
+
+  The available genres
+
+.. data:: repel
+
+  A dictionary indexed by pairs of genres (for all pairs), with
+  values being penalty scores for putting the genres close together
+
+.. todo:: Resolve the following questions
+
+  - Should Tango and Argentine Tango be classified separately?
+  - Should Slow Fox be split out?
+  - Should Viennese Waltz be classed as open?
+  - Should Samba and Salsa be classed as similar
+  - Should line dances be handled here at all?
+  - Any other genres (Paso Doble?)
+  - Are there special rules for the start (beginner-friendly?) and end (waltz?)
+  - How should songs be picked within a genre (time since last use, star ratings)?
+  - How should multi-genre songs be handled?
+  - Should low-rated songs be picked randomly (but less often), or just not at all?
+  - How many entries should be made? Specify a count or duration?
+  - How should frequencies be set? Per genre or at a higher level?
+  - What settings should be presented in the plugin? Should they pop up on use or just be plugin settings?
 '''
 
 OPEN = -1
@@ -51,6 +63,9 @@ LATIN = 1
 OTHER = 2
 
 class Genre(object):
+    '''
+    Encapsulates a genre that the generator may produce.
+    '''
     def __init__(self, name, level, group, energy = 0):
         self.name = name
         self.level = level
@@ -77,6 +92,7 @@ genres = [
 ]
 
 repel = {}
+
 for i in genres:
     for j in genres:
         rep = 0

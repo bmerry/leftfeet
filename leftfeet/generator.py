@@ -86,9 +86,19 @@ def next_genre(sequence, freqs):
     return pick_smallest(target.items())
 
 def generate_sequence(num_songs, freqs):
+    '''
+    Generate a sequence of a given length. Each element is one of the genres,
+    and `freqs` gives the relative frequency of each genre. The frequencies
+    must all be non-negative real numbers, and their sum must positive.
+
+    :raise ValueError: if the sum of frequencies is not positive
+    '''
+
     freqs = dict(freqs) # Make a copy to avoid modifying the caller's copy
     # Normalize the frequencies to sum to 1
     tfreq = sum(freqs.values())
+    if tfreq <= 0.0:
+        raise ValueError('Must have at least one non-zero frequency')
     for g in genres.genres:
         freqs[g] /= tfreq
 

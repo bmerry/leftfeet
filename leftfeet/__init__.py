@@ -14,6 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+'''
+This is the module that interacts with the Rhythmbox plugin API.
+'''
+
 from gi.repository import GObject, Gio, Gtk, RB, Peas
 import random
 import gettext
@@ -25,17 +29,41 @@ import generator
 gettext.install('rhythmbox', RB.locale_dir())
 
 class LeftFeetPlugin(GObject.Object, Peas.Activatable):
+    '''
+    Plugin class
+
+    :var RB.Shell object: Reference to the Rhythmbox shell
+    :ivar Gtk.Dialog window: Configuration dialog displayed to pick frequencies.
+      It is destroyed when not in use and set to `None`.
+    :ivar Gtk.Adjustment num_entries: adjustment holding the number of songs to generate
+    :ivar freqs: dictionary mapping :py:class:`leftfeet.genre.Genre` objects to GTK adjustments for relative frequencies
+    '''
+
     object = GObject.property(type = GObject.Object)
 
     def __init__(self):
         super(LeftFeetPlugin, self).__init__()
+        self.window = None
+        self.num_entries = None
+        self.freqs = None
 
     def destroy_window(self):
+        '''
+        Destroy the configuration window. It is safe to call this if the
+        window is already destroyed.
+        '''
         if self.window is not None:
             self.window.destroy()
+            self.window = None
 
     @staticmethod
     def get_genre(entry):
+        '''
+        Map an entry to its genre object
+
+        :returns: The matching genre, or `None` to skip the entry
+        :rtype: :py:class:`leftfeet.genres.Genre`
+        '''
         name = entry.get_string(RB.RhythmDBPropType.GENRE)
         for genre in genres.genres:
             if name == genre.name:
@@ -62,15 +90,22 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         return by_genre
 
     def freq_changed(self, adj, genre):
+        '''
+        Callback for a change in a frequency slider. This updates the
+        configuration database.
+
+        :param Gtk.Adjustment adj: Adjustment for the frequency
+        :param genre: Genre that has been updated
+        :type genre: :py:class:`leftfeet.genre.Genre`
+        '''
         self.settings['freq.' + genre.name] = repr(adj.get_value())
 
     def generate(self):
         '''
         Generate the list of songs and enqueue them to the playlist.
 
-        @todo More intelligent random choice (consider star ratings etc)
-        @todo Avoid picking songs that have been played recently
-        @todo Take a parameter for the number of songs to generate
+        .. todo:: More intelligent random choice (consider star ratings etc)
+        .. todo:: Avoid picking songs that have been played recently
         '''
         shell = self.object
         songs = self.get_songs(shell)
@@ -85,6 +120,9 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
                 songs[g].remove(entry)
 
     def generate_response(self, dialog, response):
+        '''
+        Handle a response to the *Generate playlist* dialog
+        '''
         if response == Gtk.ResponseType.OK:
             self.generate()
         self.adjustments = None
@@ -92,6 +130,9 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         dialog.destroy()
 
     def generate_action(self, action, parameter, shell):
+        '''
+        Display the *Generate playlist* dialog.
+        '''
         self.window = Gtk.Dialog(
                 title = 'LeftFeet configuration',
                 parent = shell.props.window,
@@ -144,6 +185,9 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         self.window.run()
 
     def do_activate(self):
+        '''
+        Plugin activation
+        '''
         shell = self.object
         app = shell.props.application
 
@@ -157,6 +201,9 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         self.settings = anydbm.open(RB.find_user_data_file('leftfeet.db'), 'c')
 
     def do_deactivate(self):
+        '''
+        Plugin deactivation
+        '''
         shell = self.object
         app = shell.props.application
 
