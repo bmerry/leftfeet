@@ -112,12 +112,27 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         freqs = {g: self.adjustments[g].get_value() for g in genres.genres}
         num_entries = int(self.num_entries.get_value())
         sequence = generator.generate_sequence(num_entries, freqs)
+        missing_genres = set()
         for g in sequence:
             if g in songs and songs[g]:
                 entry = random.choice(songs[g])
                 shell.props.queue_source.add_entry(entry, -1)
                 # Avoid picking it again
                 songs[g].remove(entry)
+            else:
+                missing_genres.add(g)
+        if missing_genres:
+            text = 'Could not find enough songs from the following genre(s):\n'
+            for g in missing_genres:
+                text += g.name + '\n'
+            message = Gtk.MessageDialog(
+                    shell.props.window,
+                    Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                    Gtk.MessageType.WARNING,
+                    Gtk.ButtonsType.OK,
+                    text)
+            message.show()
+            message.connect('response', lambda w, response: w.destroy())
 
     def generate_response(self, dialog, response):
         '''
