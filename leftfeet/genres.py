@@ -87,9 +87,12 @@ genres = [
     Genre('samba', ADVANCED, LATIN),
     Genre('boogie', OPEN, OTHER),
     Genre('sokkie', OPEN, OTHER, 1),
-    Genre('viennese waltz', OPEN, BALLROOM, 1),
-    Genre('argentine tango', OPEN, OTHER)
+    Genre('viennese waltz', OPEN, BALLROOM, 1)
 ]
+
+genre_aliases = {
+    'foxtrot, slow': 'foxtrot'
+}
 
 repel = {}
 

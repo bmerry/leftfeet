@@ -22,6 +22,7 @@ from gi.repository import GObject, Gio, Gtk, RB, Peas
 import random
 import gettext
 import anydbm
+import time
 
 import genres
 import generator
@@ -65,9 +66,26 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         :rtype: :py:class:`leftfeet.genres.Genre`
         '''
         name = entry.get_string(RB.RhythmDBPropType.GENRE)
+        name = genres.genre_aliases.get(name, name)
         for genre in genres.genres:
             if name == genre.name:
                 return genre
+
+    def valid_song(self, entry, now):
+        '''
+        Determines whether this song should be a candidate. In theory
+        this should rather be done by using a RhythmDB query (much faster,
+        since it avoids reflecting everything back and forth through Python,
+        and may even be indexed), but I can't find any evidence that it is
+        actually possible to make this work in Python.
+        '''
+        rating = entry.get_double(RB.RhythmDBPropType.RATING)
+        if rating < 4:
+            return False
+        last_played = entry.get_ulong(RB.RhythmDBPropType.LAST_PLAYED)
+        if last_played > now - 43200:   # Last 12 hours
+            return False
+        return True
 
     def get_songs(self, shell):
         '''
@@ -82,10 +100,12 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         entry = lib.iter_to_entry(it)
         for g in genres.genres:
             by_genre[g] = []
+        now = time.time() # Cache it for valid_song
         while entry:
-            genre = self.get_genre(entry)
-            if genre is not None:
-                by_genre[genre].append(entry)
+            if self.valid_song(entry, now):
+                genre = self.get_genre(entry)
+                if genre is not None:
+                    by_genre[genre].append(entry)
             entry = lib.get_next_from_entry(entry)
         return by_genre
 
