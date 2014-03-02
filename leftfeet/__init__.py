@@ -25,9 +25,9 @@ import anydbm
 import time
 import sys
 
-import generator
+from . import generator
 __path__.insert(0, RB.user_data_dir())  # Allows user to override location
-import lf_site
+from . import lf_site
 
 gettext.install('rhythmbox', RB.locale_dir())
 
@@ -101,7 +101,7 @@ class ConfigDialog(Gtk.Dialog):
         table = Gtk.Table(len(lf_site.genres), 2)
         for (i, g) in enumerate(lf_site.genres):
             key = 'freq.' + g.name
-            if self.settings.has_key(key):
+            if key in self.settings:
                 freq = float(self.settings[key])
             else:
                 freq = g.default_freq

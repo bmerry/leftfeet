@@ -202,7 +202,7 @@ class TrivialFactory(object):
         return [song.genre]
 
 if __name__ == '__main__':
-    import lf_site
+    from . import lf_site
 
     freqs = {}
     for g in lf_site.genres:
