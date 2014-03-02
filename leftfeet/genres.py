@@ -87,6 +87,7 @@ genres = [
     Genre('samba', ADVANCED, LATIN),
     Genre('boogie', OPEN, OTHER),
     Genre('sokkie', OPEN, OTHER, 1),
+    Genre('salsa', OPEN, LATIN),
     Genre('viennese waltz', OPEN, BALLROOM, 1)
 ]
 
