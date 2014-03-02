@@ -29,6 +29,75 @@ import generator
 
 gettext.install('rhythmbox', RB.locale_dir())
 
+def get_genre(entry):
+    '''
+    Map an entry to its genre object
+
+    :returns: The matching genre, or `None` to skip the entry
+    :rtype: :py:class:`leftfeet.genres.Genre`
+    '''
+    name = entry.get_string(RB.RhythmDBPropType.GENRE)
+    name = genres.genre_aliases.get(name, name)
+    for genre in genres.genres:
+        if name == genre.name:
+            return genre
+
+def valid_song(entry, now):
+    '''
+    Determines whether this song should be a candidate. In theory
+    this should rather be done by using a RhythmDB query (much faster,
+    since it avoids reflecting everything back and forth through Python,
+    and may even be indexed), but I can't find any evidence that it is
+    actually possible to make this work in Python.
+    '''
+    rating = entry.get_double(RB.RhythmDBPropType.RATING)
+    if rating < 4:
+        return False
+    last_played = entry.get_ulong(RB.RhythmDBPropType.LAST_PLAYED)
+    if last_played > now - 43200:   # Last 12 hours
+        return False
+    return True
+
+class SongFactory(object):
+    '''
+    Provides the factory for :py:func:`generator.generate_songs`.
+    '''
+    def __init__(self, shell):
+        self.songs = {g: [] for g in genres.genres}
+
+        lib = shell.props.library_source.props.base_query_model
+        it = lib.get_iter_first()
+        if it is not None:
+            entry = lib.iter_to_entry(it)
+            now = time.time() # Cache it for valid_song
+            while entry:
+                if valid_song(entry, now):
+                    genre = get_genre(entry)
+                    if genre is not None:
+                        self.songs[genre].append(entry)
+                entry = lib.get_next_from_entry(entry)
+
+    def get(self, genre):
+        if genre in self.songs and self.songs[genre]:
+            entry = random.choice(self.songs[genre])
+            # Avoid picking it again
+            self.songs[genre].remove(entry)
+            return entry
+        else:
+            return generator.TrivialSong(genre)
+
+    def get_duration(self, entry):
+        if isinstance(entry, generator.TrivialSong):
+            return 1
+        else:
+            return entry.get_ulong(RB.RhythmDBPropType.DURATION)
+
+    def get_genres(self, entry):
+        if isinstance(entry, generator.TrivialSong):
+            return [entry.genre]
+        else:
+            return [get_genre(entry)]
+
 class LeftFeetPlugin(GObject.Object, Peas.Activatable):
     '''
     Plugin class
@@ -36,7 +105,7 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
     :var RB.Shell object: Reference to the Rhythmbox shell
     :ivar Gtk.Dialog window: Configuration dialog displayed to pick frequencies.
       It is destroyed when not in use and set to `None`.
-    :ivar Gtk.Adjustment num_entries: adjustment holding the number of songs to generate
+    :ivar Gtk.Adjustment duration_minutes: adjustment holding the length of time to generate over
     :ivar freqs: dictionary mapping :py:class:`leftfeet.genre.Genre` objects to GTK adjustments for relative frequencies
     '''
 
@@ -45,7 +114,7 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
     def __init__(self):
         super(LeftFeetPlugin, self).__init__()
         self.window = None
-        self.num_entries = None
+        self.duration_minutes = None
         self.freqs = None
 
     def destroy_window(self):
@@ -56,58 +125,6 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         if self.window is not None:
             self.window.destroy()
             self.window = None
-
-    @staticmethod
-    def get_genre(entry):
-        '''
-        Map an entry to its genre object
-
-        :returns: The matching genre, or `None` to skip the entry
-        :rtype: :py:class:`leftfeet.genres.Genre`
-        '''
-        name = entry.get_string(RB.RhythmDBPropType.GENRE)
-        name = genres.genre_aliases.get(name, name)
-        for genre in genres.genres:
-            if name == genre.name:
-                return genre
-
-    def valid_song(self, entry, now):
-        '''
-        Determines whether this song should be a candidate. In theory
-        this should rather be done by using a RhythmDB query (much faster,
-        since it avoids reflecting everything back and forth through Python,
-        and may even be indexed), but I can't find any evidence that it is
-        actually possible to make this work in Python.
-        '''
-        rating = entry.get_double(RB.RhythmDBPropType.RATING)
-        if rating < 4:
-            return False
-        last_played = entry.get_ulong(RB.RhythmDBPropType.LAST_PLAYED)
-        if last_played > now - 43200:   # Last 12 hours
-            return False
-        return True
-
-    def get_songs(self, shell):
-        '''
-        Returns a dictionary of lists, indexed by genre object.
-        '''
-        lib = shell.props.library_source.props.base_query_model
-        by_genre = {}
-
-        it = lib.get_iter_first()
-        if it is None:
-            return by_genre # Empty library
-        entry = lib.iter_to_entry(it)
-        for g in genres.genres:
-            by_genre[g] = []
-        now = time.time() # Cache it for valid_song
-        while entry:
-            if self.valid_song(entry, now):
-                genre = self.get_genre(entry)
-                if genre is not None:
-                    by_genre[genre].append(entry)
-            entry = lib.get_next_from_entry(entry)
-        return by_genre
 
     def freq_changed(self, adj, genre):
         '''
@@ -128,19 +145,17 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         .. todo:: Avoid picking songs that have been played recently
         '''
         shell = self.object
-        songs = self.get_songs(shell)
         freqs = {g: self.adjustments[g].get_value() for g in genres.genres}
-        num_entries = int(self.num_entries.get_value())
-        sequence = generator.generate_sequence(num_entries, freqs)
+        duration = int(self.duration_minutes.get_value() * 60)
+        factory = SongFactory(shell)
+        songs = generator.generate_songs(freqs, duration, factory)
         missing_genres = set()
-        for g in sequence:
-            if g in songs and songs[g]:
-                entry = random.choice(songs[g])
-                shell.props.queue_source.add_entry(entry, -1)
-                # Avoid picking it again
-                songs[g].remove(entry)
+        for song in songs:
+            if isinstance(song, generator.TrivialSong):
+                missing_genres.add(song.genre)
             else:
-                missing_genres.add(g)
+                # Append to playlist
+                shell.props.queue_source.add_entry(song, -1)
         if missing_genres:
             text = 'Could not find enough songs from the following genre(s):\n'
             for g in missing_genres:
@@ -161,7 +176,7 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         if response == Gtk.ResponseType.OK:
             self.generate()
         self.adjustments = None
-        self.num_entries = None
+        self.duration_minutes = None
         dialog.destroy()
 
     def generate_action(self, action, parameter, shell):
@@ -205,12 +220,12 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
 
         hbox = Gtk.HBox()
         vbox.pack_start(hbox, False, False, 0)
-        hbox.pack_start(Gtk.Label(_('Entries')), False, False, 0)
-        self.num_entries = Gtk.Adjustment(100, 0, 400, 1, 10)
+        hbox.pack_start(Gtk.Label(_('Minutes')), False, False, 0)
+        self.duration_minutes = Gtk.Adjustment(240, 0, 400, 1, 10)
         spinner = Gtk.SpinButton()
-        spinner.set_adjustment(self.num_entries)
+        spinner.set_adjustment(self.duration_minutes)
         spinner.set_digits(0)
-        spinner.set_value(self.num_entries.get_value())
+        spinner.set_value(self.duration_minutes.get_value())
         hbox.pack_start(spinner, True, True, 0)
 
         self.window.set_default_size(500, -1)
