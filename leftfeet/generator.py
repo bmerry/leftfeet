@@ -49,6 +49,8 @@ which gives the playlist some random variation.
 import random
 
 WINDOW = 10
+# Scaling weights: inverses, but integral to avoid floating-point issues
+weights = [0] + [2520 // i for i in range(1, WINDOW + 1)]
 
 def pick_smallest(kv):
     '''
@@ -70,11 +72,35 @@ def pick_smallest(kv):
             nbest += 1
     return best_key
 
+def score_single(sequence, repel, pos):
+    '''
+    Computes the portion of the heuristic due to a single item.
+    '''
+    ans = 0
+    for i in range(max(0, pos - WINDOW), pos):
+        ans += repel[(sequence[i], sequence[pos])] * weights[pos - i]
+    for i in range(pos + 1, min(pos + WINDOW + 1, len(sequence))):
+        ans += repel[(sequence[pos], sequence[i])] * weights[i - pos]
+    return ans
+
+def score_pair(sequence, repel, pos):
+    '''
+    Computes the portion of the heuristic due to two adjacent elements.
+    '''
+    ans = -(repel[(sequence[pos], sequence[pos + 1])] * weights[1]) # Inclusion-exclusion
+    ans += score_single(sequence, repel, pos)
+    ans += score_single(sequence, repel, pos + 1)
+    return ans
+
 def score(sequence, repel):
+    '''
+    Computes score for the entire sequence. It is not used, but is retained
+    for debugging purposes.
+    '''
     ans = 0
     for i in range(1, len(sequence)):
         for j in range(max(0, i - WINDOW), i):
-            ans += repel[(sequence[j], sequence[i])] / (i - j)
+            ans += repel[(sequence[j], sequence[i])] * weights[i - j]
     return ans
 
 def next_genre(sequence, freqs):
@@ -133,12 +159,19 @@ def generate_songs(freqs, repel, duration, factory):
             # Exhausted that genre
             del freqs[g]
             continue
-        scores = []
-        for i in range(len(sequence) + 1):
-            sequence.insert(i, g)
-            scores.append((i, score(sequence, repel)))
-            assert sequence[i] == g
-            del sequence[i]
+        sequence.insert(0, g)
+        cur_score = 0   # Was score(sequence, repel), but only deltas matter
+        scores = [(0, cur_score)]
+        for i in range(len(sequence) - 1):
+            # Subtract old relative values
+            cur_score -= score_pair(sequence, repel, i)
+            # Swap new item along one
+            sequence[i], sequence[i + 1] = sequence[i + 1], sequence[i]
+            # Add new relative values
+            cur_score += score_pair(sequence, repel, i)
+            scores.append((i, cur_score))
+        sequence.pop() # Remove the temporarily added new genre
+
         place = pick_smallest(scores)
         sequence.insert(place, g)
         songs.insert(place, song)
@@ -177,3 +210,5 @@ if __name__ == '__main__':
     songs = generate_songs(freqs, lf_site.repel, 50, TrivialFactory())
     for g in songs:
         print(g.genre.name)
+
+__all__ = ['generate_songs']

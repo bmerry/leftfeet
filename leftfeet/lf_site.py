@@ -147,3 +147,5 @@ def valid_song(entry, now):
     if last_played > now - 43200:   # Last 12 hours
         return False
     return True
+
+__all__ = ['genres', 'repel', 'get_genre', 'valid_song']

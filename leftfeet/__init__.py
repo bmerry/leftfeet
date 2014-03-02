@@ -205,7 +205,7 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         hbox = Gtk.HBox()
         vbox.pack_start(hbox, False, False, 0)
         hbox.pack_start(Gtk.Label(_('Minutes')), False, False, 0)
-        self.duration_minutes = Gtk.Adjustment(240, 0, 400, 1, 10)
+        self.duration_minutes = Gtk.Adjustment(240, 0, 720, 1, 10)
         spinner = Gtk.SpinButton()
         spinner.set_adjustment(self.duration_minutes)
         spinner.set_digits(0)
