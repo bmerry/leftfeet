@@ -97,7 +97,7 @@ class ConfigDialog(Gtk.Dialog):
 
         freq_frame = Gtk.Frame()
         freq_frame.set_label('Relative Frequency')
-        vbox.pack_start(freq_frame, False, False, 0)
+        vbox.pack_start(freq_frame, False, False, 5)
 
         table = Gtk.Table(len(lf_site.genres), 2)
         for (i, g) in enumerate(lf_site.genres):
@@ -107,24 +107,26 @@ class ConfigDialog(Gtk.Dialog):
             else:
                 freq = g.default_freq
 
-            table.attach(Gtk.Label(_(g.name)), 0, 1, i, i + 1, 0)
+            table.attach(Gtk.Label(_(g.name)), 0, 1, i, i + 1, 0, xpadding = 5, ypadding = 5)
             adj = Gtk.Adjustment(freq, 0.0, 100.0, 1.0, 10.0)
             adj.connect('value-changed', self.freq_changed, g)
             scale = Gtk.HScale()
             scale.set_adjustment(adj)
             scale.set_value_pos(Gtk.PositionType.LEFT)
-            table.attach(scale, 1, 2, i, i + 1, Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.FILL)
+            table.attach(scale, 1, 2, i, i + 1,
+                    Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.FILL,
+                    xpadding = 5, ypadding = 5)
             self.adjustments[g] = adj
         freq_frame.add(table)
 
         hbox = Gtk.HBox()
-        vbox.pack_start(hbox, False, False, 0)
-        hbox.pack_start(Gtk.Label(_('Minutes')), False, False, 0)
+        vbox.pack_start(hbox, False, False, 5)
+        hbox.pack_start(Gtk.Label(_('Minutes')), False, False, 5)
         spinner = Gtk.SpinButton()
         spinner.set_adjustment(self.duration_minutes)
         spinner.set_digits(0)
         spinner.set_value(self.duration_minutes.get_value())
-        hbox.pack_start(spinner, True, True, 0)
+        hbox.pack_start(spinner, True, True, 5)
 
         self.set_default_size(500, -1)
         self.show_all()
