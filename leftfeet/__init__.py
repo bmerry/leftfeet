@@ -34,9 +34,13 @@ gettext.install('rhythmbox', RB.locale_dir())
 class SongFactory(object):
     '''
     Provides the factory for :py:func:`generator.generate_songs`.
+
+    :ivar dict songs: list of valid songs for each genre
+    :ivar list missing: genres we were asked for but could not provide
     '''
     def __init__(self, shell):
         self.songs = {g: [] for g in lf_site.genres}
+        self.missing = []
 
         lib = shell.props.library_source.props.base_query_model
         it = lib.get_iter_first()
@@ -57,19 +61,14 @@ class SongFactory(object):
             self.songs[genre].remove(entry)
             return entry
         else:
-            return generator.TrivialSong(genre)
+            self.missing.append(genre)
+            return None
 
     def get_duration(self, entry):
-        if isinstance(entry, generator.TrivialSong):
-            return 1
-        else:
-            return entry.get_ulong(RB.RhythmDBPropType.DURATION)
+        return entry.get_ulong(RB.RhythmDBPropType.DURATION)
 
     def get_genres(self, entry):
-        if isinstance(entry, generator.TrivialSong):
-            return [entry.genre]
-        else:
-            return [lf_site.get_genre(entry)]
+        return [lf_site.get_genre(entry)]
 
 class LeftFeetPlugin(GObject.Object, Peas.Activatable):
     '''
@@ -124,14 +123,10 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         songs = generator.generate_songs(freqs, lf_site.repel, duration, factory)
         missing_genres = set()
         for song in songs:
-            if isinstance(song, generator.TrivialSong):
-                missing_genres.add(song.genre)
-            else:
-                # Append to playlist
-                shell.props.queue_source.add_entry(song, -1)
-        if missing_genres:
+            shell.props.queue_source.add_entry(song, -1)
+        if factory.missing:
             text = 'Could not find enough songs from the following genre(s):\n'
-            for g in missing_genres:
+            for g in factory.missing:
                 text += g.name + '\n'
             message = Gtk.MessageDialog(
                     shell.props.window,

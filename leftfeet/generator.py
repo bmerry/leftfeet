@@ -53,7 +53,8 @@ WINDOW = 10
 def pick_smallest(kv):
     '''
     In a list of key, value pairs, finds the one with the smallest value and
-    returns the key. Ties are broken uniformly at random.
+    returns the key. Ties are broken uniformly at random. If `kv` is empty,
+    returns `None`.
     '''
     nbest = 0
     best_key = None
@@ -81,7 +82,8 @@ def next_genre(sequence, freqs):
     for g in freqs.keys():
         target[g] = (len(sequence) + 1) * -freqs[g]
     for s in sequence:
-        target[s] += 1
+        if s in freqs:
+            target[s] += 1
     return pick_smallest(target.items())
 
 def generate_songs(freqs, repel, duration, factory):
@@ -99,7 +101,8 @@ def generate_songs(freqs, repel, duration, factory):
 
         .. py:function:: get(genre):
 
-           Return a song of the given genre.
+           Return a song of the given genre. It may return `None` if there are
+           no more songs of that genre.
 
         .. py:function:: get_duration(song):
 
@@ -123,9 +126,13 @@ def generate_songs(freqs, repel, duration, factory):
     sequence = []
     songs = []
     current_duration = 0
-    while current_duration < duration:
+    while current_duration < duration and freqs:
         g = next_genre(sequence, freqs)
         song = factory.get(g)
+        if song is None:
+            # Exhausted that genre
+            del freqs[g]
+            continue
         scores = []
         for i in range(len(sequence) + 1):
             sequence.insert(i, g)
