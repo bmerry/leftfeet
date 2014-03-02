@@ -80,16 +80,18 @@ class ConfigDialog(Gtk.Dialog):
     def __init__(self, parent, settings):
         Gtk.Dialog.__init__(self,
             title = 'LeftFeet configuration',
-            parent = parent,
-            flags = Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-            buttons = [
-                Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
-                Gtk.STOCK_OK, Gtk.ResponseType.OK
-            ])
+            transient_for = parent,
+            modal = True,
+            destroy_with_parent = True)
+        self.add_buttons(
+            Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+            Gtk.STOCK_OK, Gtk.ResponseType.OK
+        )
 
         self.settings = settings
         self.adjustments = {}
-        self.duration_minutes = Gtk.Adjustment(240, 0, 720, 1, 10)
+        self.duration_minutes = Gtk.Adjustment(
+            value = 240, lower = 0, upper = 720, step_increment = 1, page_increment = 10)
 
         vbox = Gtk.VBox()
         self.get_content_area().add(vbox)
@@ -98,7 +100,7 @@ class ConfigDialog(Gtk.Dialog):
         freq_frame.set_label('Relative Frequency')
         vbox.pack_start(freq_frame, False, False, 5)
 
-        table = Gtk.Table(len(lf_site.genres), 2)
+        grid = Gtk.Grid()
         for (i, g) in enumerate(lf_site.genres):
             key = 'freq.' + g.name
             if key in self.settings:
@@ -106,21 +108,24 @@ class ConfigDialog(Gtk.Dialog):
             else:
                 freq = g.default_freq
 
-            table.attach(Gtk.Label(_(g.name)), 0, 1, i, i + 1, 0, xpadding = 5, ypadding = 5)
-            adj = Gtk.Adjustment(freq, 0.0, 100.0, 1.0, 10.0)
+            grid.attach(Gtk.Label(label = _(g.name), margin = 5), 0, i, 1, 1)
+            adj = Gtk.Adjustment(
+                value = freq,
+                lower = 0.0, upper = 100.0,
+                step_increment = 1.0, page_increment = 10.0)
             adj.connect('value-changed', self.freq_changed, g)
-            scale = Gtk.HScale()
+            scale = Gtk.Scale(
+                orientation = Gtk.Orientation.HORIZONTAL,
+                value_pos = Gtk.PositionType.LEFT, margin = 5,
+                hexpand = True, halign = Gtk.Align.FILL)
             scale.set_adjustment(adj)
-            scale.set_value_pos(Gtk.PositionType.LEFT)
-            table.attach(scale, 1, 2, i, i + 1,
-                    Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.FILL,
-                    xpadding = 5, ypadding = 5)
+            grid.attach(scale, 1, i, 1, 1)
             self.adjustments[g] = adj
-        freq_frame.add(table)
+        freq_frame.add(grid)
 
         hbox = Gtk.HBox()
         vbox.pack_start(hbox, False, False, 5)
-        hbox.pack_start(Gtk.Label(_('Minutes')), False, False, 5)
+        hbox.pack_start(Gtk.Label(label = _('Minutes')), False, False, 5)
         spinner = Gtk.SpinButton()
         spinner.set_adjustment(self.duration_minutes)
         spinner.set_digits(0)
