@@ -24,7 +24,7 @@ import gettext
 import anydbm
 import time
 
-import genres
+import lf_site
 import generator
 
 gettext.install('rhythmbox', RB.locale_dir())
@@ -34,11 +34,11 @@ def get_genre(entry):
     Map an entry to its genre object
 
     :returns: The matching genre, or `None` to skip the entry
-    :rtype: :py:class:`leftfeet.genres.Genre`
+    :rtype: :py:class:`leftfeet.lf_site.Genre`
     '''
     name = entry.get_string(RB.RhythmDBPropType.GENRE)
-    name = genres.genre_aliases.get(name, name)
-    for genre in genres.genres:
+    name = lf_site.genre_aliases.get(name, name)
+    for genre in lf_site.genres:
         if name == genre.name:
             return genre
 
@@ -63,7 +63,7 @@ class SongFactory(object):
     Provides the factory for :py:func:`generator.generate_songs`.
     '''
     def __init__(self, shell):
-        self.songs = {g: [] for g in genres.genres}
+        self.songs = {g: [] for g in lf_site.genres}
 
         lib = shell.props.library_source.props.base_query_model
         it = lib.get_iter_first()
@@ -145,7 +145,7 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         .. todo:: Avoid picking songs that have been played recently
         '''
         shell = self.object
-        freqs = {g: self.adjustments[g].get_value() for g in genres.genres}
+        freqs = {g: self.adjustments[g].get_value() for g in lf_site.genres}
         duration = int(self.duration_minutes.get_value() * 60)
         factory = SongFactory(shell)
         songs = generator.generate_songs(freqs, duration, factory)
@@ -199,9 +199,9 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         freq_frame.set_label('Relative Frequency')
         vbox.pack_start(freq_frame, False, False, 0)
 
-        table = Gtk.Table(len(genres.genres), 2)
+        table = Gtk.Table(len(lf_site.genres), 2)
         self.adjustments = {}
-        for (i, g) in enumerate(genres.genres):
+        for (i, g) in enumerate(lf_site.genres):
             key = 'freq.' + g.name
             if self.settings.has_key(key):
                 freq = float(self.settings[key])

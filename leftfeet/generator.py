@@ -47,7 +47,7 @@ which gives the playlist some random variation.
 '''
 
 import random
-import genres
+import lf_site
 
 WINDOW = 10
 
@@ -74,12 +74,12 @@ def score(sequence):
     ans = 0
     for i in range(1, len(sequence)):
         for j in range(max(0, i - WINDOW), i):
-            ans += genres.repel[(sequence[j], sequence[i])] / (i - j)
+            ans += lf_site.repel[(sequence[j], sequence[i])] / (i - j)
     return ans
 
 def next_genre(sequence, freqs):
     target = {}
-    for g in genres.genres:
+    for g in lf_site.genres:
         target[g] = (len(sequence) + 1) * -freqs[g]
     for s in sequence:
         target[s] += 1
@@ -117,7 +117,7 @@ def generate_songs(freqs, duration, factory):
     tfreq = sum(freqs.values())
     if tfreq <= 0.0:
         raise ValueError('Must have at least one non-zero frequency')
-    for g in genres.genres:
+    for g in lf_site.genres:
         freqs[g] /= tfreq
 
     sequence = []
@@ -163,7 +163,7 @@ class TrivialFactory(object):
 
 if __name__ == '__main__':
     freqs = {}
-    for g in genres.genres:
+    for g in lf_site.genres:
         freqs[g] = random.uniform(0.8, 1.0)
     songs = generate_songs(freqs, 50, TrivialFactory())
     for g in songs:
