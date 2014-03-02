@@ -12,8 +12,9 @@ a local user on a UNIX-like system, this is ~/.local/share/rhythmbox/plugins.
 
 Configuration
 -------------
-The set of genres is hard-coded into [leftfeet/lf\_site.py]. To adapt LeftFeet
-to your music library, copy this file to the user data directory (for example,
+The set of genres is hard-coded into
+[leftfeet/lf_site.py](leftfeet/lf_site.py). To adapt LeftFeet to your music
+library and requirements, copy this file to the user data directory (for example,
 ~/.local/share/rhythmbox) and edit it.
 
 Usage
@@ -40,5 +41,5 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-Additionally, [leftfeet/lf\_site.py] is made available under an MIT-style
-license. Refer to the file itself for the details.
+Additionally, [leftfeet/lf_site.py](leftfeet/lf_site.py) is made available
+under an MIT-style license. Refer to the file itself for the details.
