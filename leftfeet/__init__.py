@@ -46,12 +46,11 @@ class SongFactory(object):
         it = lib.get_iter_first()
         if it is not None:
             entry = lib.iter_to_entry(it)
-            now = time.time() # Cache it for valid_song
+            now = time.time() # Cache it for get_genre
             while entry:
-                if lf_site.valid_song(entry, now):
-                    genre = lf_site.get_genre(entry)
-                    if genre is not None:
-                        self.songs[genre].append(entry)
+                genre = lf_site.get_genre(entry, now)
+                if genre is not None:
+                    self.songs[genre].append(entry)
                 entry = lib.get_next_from_entry(entry)
 
     def get(self, genre):
