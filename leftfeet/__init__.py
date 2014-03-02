@@ -70,33 +70,64 @@ class SongFactory(object):
     def get_genres(self, entry):
         return [lf_site.get_genre(entry)]
 
-class LeftFeetPlugin(GObject.Object, Peas.Activatable):
+class ConfigDialog(Gtk.Dialog):
     '''
-    Plugin class
+    Configuration dialog to control frequencies etc.
 
-    :var RB.Shell object: Reference to the Rhythmbox shell
-    :ivar Gtk.Dialog window: Configuration dialog displayed to pick frequencies.
-      It is destroyed when not in use and set to `None`.
     :ivar Gtk.Adjustment duration_minutes: adjustment holding the length of time to generate over
-    :ivar freqs: dictionary mapping :py:class:`leftfeet.genre.Genre` objects to GTK adjustments for relative frequencies
+    :ivar dict freqs: dictionary mapping :py:class:`leftfeet.genre.Genre` objects to GTK adjustments for relative frequencies
+    :ivar settings: settings database
     '''
+    def __init__(self, parent, settings):
+        Gtk.Dialog.__init__(self,
+            title = 'LeftFeet configuration',
+            parent = parent,
+            flags = Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+            buttons = [
+                Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+                Gtk.STOCK_OK, Gtk.ResponseType.OK
+            ])
 
-    object = GObject.property(type = GObject.Object)
+        self.settings = settings
+        self.adjustments = {}
+        self.duration_minutes = Gtk.Adjustment(240, 0, 720, 1, 10)
 
-    def __init__(self):
-        super(LeftFeetPlugin, self).__init__()
-        self.window = None
-        self.duration_minutes = None
-        self.freqs = None
+        vbox = Gtk.VBox()
+        self.get_content_area().add(vbox)
 
-    def destroy_window(self):
-        '''
-        Destroy the configuration window. It is safe to call this if the
-        window is already destroyed.
-        '''
-        if self.window is not None:
-            self.window.destroy()
-            self.window = None
+        freq_frame = Gtk.Frame()
+        freq_frame.set_label('Relative Frequency')
+        vbox.pack_start(freq_frame, False, False, 0)
+
+        table = Gtk.Table(len(lf_site.genres), 2)
+        for (i, g) in enumerate(lf_site.genres):
+            key = 'freq.' + g.name
+            if self.settings.has_key(key):
+                freq = float(self.settings[key])
+            else:
+                freq = g.default_freq
+
+            table.attach(Gtk.Label(_(g.name)), 0, 1, i, i + 1, 0)
+            adj = Gtk.Adjustment(freq, 0.0, 100.0, 1.0, 10.0)
+            adj.connect('value-changed', self.freq_changed, g)
+            scale = Gtk.HScale()
+            scale.set_adjustment(adj)
+            scale.set_value_pos(Gtk.PositionType.LEFT)
+            table.attach(scale, 1, 2, i, i + 1, Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.FILL)
+            self.adjustments[g] = adj
+        freq_frame.add(table)
+
+        hbox = Gtk.HBox()
+        vbox.pack_start(hbox, False, False, 0)
+        hbox.pack_start(Gtk.Label(_('Minutes')), False, False, 0)
+        spinner = Gtk.SpinButton()
+        spinner.set_adjustment(self.duration_minutes)
+        spinner.set_digits(0)
+        spinner.set_value(self.duration_minutes.get_value())
+        hbox.pack_start(spinner, True, True, 0)
+
+        self.set_default_size(500, -1)
+        self.show_all()
 
     def freq_changed(self, adj, genre):
         '''
@@ -109,18 +140,30 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         '''
         self.settings['freq.' + genre.name] = repr(adj.get_value())
 
-    def generate(self):
+class LeftFeetPlugin(GObject.Object, Peas.Activatable):
+    '''
+    Plugin class
+
+    :var RB.Shell object: Reference to the Rhythmbox shell
+    '''
+
+    object = GObject.property(type = GObject.Object)
+
+    def __init__(self):
+        super(LeftFeetPlugin, self).__init__()
+
+    def generate(self, freqs, duration):
         '''
         Generate the list of songs and enqueue them to the playlist.
 
         .. todo:: More intelligent random choice (consider star ratings etc)
         .. todo:: Avoid picking songs that have been played recently
 
+        :param map freqs: map from genre to relation frequency
+        :param int duration: duration to target (seconds)
         :return: `True` if generation was successful, `False` to redisplay the dialog
         '''
         shell = self.object
-        freqs = {g: self.adjustments[g].get_value() for g in lf_site.genres}
-        duration = int(self.duration_minutes.get_value() * 60)
         factory = SongFactory(shell)
         try:
             songs = generator.generate_songs(freqs, lf_site.repel, duration, factory)
@@ -152,71 +195,23 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
             message.run()
         return True
 
-    def generate_response(self, dialog, response):
-        '''
-        Handle a response to the *Generate playlist* dialog
-        '''
-        if response == Gtk.ResponseType.OK:
-            if not self.generate():
-                return
-        self.adjustments = None
-        self.duration_minutes = None
-        dialog.destroy()
-
     def generate_action(self, action, parameter, shell):
         '''
-        Display the *Generate playlist* dialog.
+        Display the *Generate playlist* dialog and handle the response.
         '''
-        self.window = Gtk.Dialog(
-                title = 'LeftFeet configuration',
-                parent = shell.props.window,
-                flags = Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-                buttons = [
-                    Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
-                    Gtk.STOCK_OK, Gtk.ResponseType.OK
-                ])
+        shell = self.object
+        dialog = ConfigDialog(shell.props.window, self.settings)
 
-        vbox = Gtk.VBox()
-        self.window.get_content_area().add(vbox)
-
-        freq_frame = Gtk.Frame()
-        freq_frame.set_label('Relative Frequency')
-        vbox.pack_start(freq_frame, False, False, 0)
-
-        table = Gtk.Table(len(lf_site.genres), 2)
-        self.adjustments = {}
-        for (i, g) in enumerate(lf_site.genres):
-            key = 'freq.' + g.name
-            if self.settings.has_key(key):
-                freq = float(self.settings[key])
-            else:
-                freq = g.default_freq
-
-            table.attach(Gtk.Label(_(g.name)), 0, 1, i, i + 1, 0)
-            adj = Gtk.Adjustment(freq, 0.0, 100.0, 1.0, 10.0)
-            adj.connect('value-changed', self.freq_changed, g)
-            scale = Gtk.HScale()
-            scale.set_adjustment(adj)
-            scale.set_value_pos(Gtk.PositionType.LEFT)
-            table.attach(scale, 1, 2, i, i + 1, Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.FILL)
-            self.adjustments[g] = adj
-        freq_frame.add(table)
-
-        hbox = Gtk.HBox()
-        vbox.pack_start(hbox, False, False, 0)
-        hbox.pack_start(Gtk.Label(_('Minutes')), False, False, 0)
-        self.duration_minutes = Gtk.Adjustment(240, 0, 720, 1, 10)
-        spinner = Gtk.SpinButton()
-        spinner.set_adjustment(self.duration_minutes)
-        spinner.set_digits(0)
-        spinner.set_value(self.duration_minutes.get_value())
-        hbox.pack_start(spinner, True, True, 0)
-
-        self.window.set_default_size(500, -1)
-        self.window.show_all()
-        self.window.connect('response', self.generate_response)
-        self.window.connect('delete-event', self.generate_response, None)
-        self.window.run()
+        done = False
+        while not done:
+            response = dialog.run()
+            done = True
+            if response == Gtk.ResponseType.OK:
+                freqs = {g: dialog.adjustments[g].get_value() for g in lf_site.genres}
+                duration = int(dialog.duration_minutes.get_value() * 60)
+                if not self.generate(freqs, duration):
+                    done = False
+        dialog.destroy()
 
     def do_activate(self):
         '''
@@ -244,4 +239,3 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         self.settings.close()
         app.remove_plugin_menu_item('tools', 'leftfeet-generate')
         app.remove_action('leftfeet-generate')
-        self.destroy_window()
