@@ -114,3 +114,36 @@ for i in genres:
         if i.group == j.group:
             rep += 1
         repel[(i, j)] = rep
+
+def get_genre(entry):
+    '''
+    Map an entry to its genre object
+
+    :returns: The matching genre, or `None` to skip the entry
+    :rtype: :py:class:`Genre`
+    '''
+    from gi.repository import RB
+
+    name = entry.get_string(RB.RhythmDBPropType.GENRE)
+    name = genre_aliases.get(name, name)
+    for genre in genres:
+        if name == genre.name:
+            return genre
+
+def valid_song(entry, now):
+    '''
+    Determines whether this song should be a candidate. In theory
+    this should rather be done by using a RhythmDB query (much faster,
+    since it avoids reflecting everything back and forth through Python,
+    and may even be indexed), but several hours of attempting to use
+    the query interface produced nothing but frustration.
+    '''
+    from gi.repository import RB
+
+    rating = entry.get_double(RB.RhythmDBPropType.RATING)
+    if rating < 4:
+        return False
+    last_played = entry.get_ulong(RB.RhythmDBPropType.LAST_PLAYED)
+    if last_played > now - 43200:   # Last 12 hours
+        return False
+    return True

@@ -12,9 +12,9 @@ a local user on a UNIX-like system, this is ~/.local/share/rhythmbox/plugins.
 
 Configuration
 -------------
-The set of genres is hard-coded into [leftfeet/genres.py]. To adapt LeftFeet
-to your music library, edit this file to select genres that you want to play
-and the weights governing how likely two songs are to appear near each other.
+The set of genres is hard-coded into [leftfeet/lf_site.py]. To adapt LeftFeet
+to your music library, copy this file to the user data directory (for example,
+~/.local/share/rhythmbox) and edit it.
 
 Usage
 -----

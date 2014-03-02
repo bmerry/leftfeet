@@ -47,7 +47,6 @@ which gives the playlist some random variation.
 '''
 
 import random
-import lf_site
 
 WINDOW = 10
 
@@ -70,22 +69,22 @@ def pick_smallest(kv):
             nbest += 1
     return best_key
 
-def score(sequence):
+def score(sequence, repel):
     ans = 0
     for i in range(1, len(sequence)):
         for j in range(max(0, i - WINDOW), i):
-            ans += lf_site.repel[(sequence[j], sequence[i])] / (i - j)
+            ans += repel[(sequence[j], sequence[i])] / (i - j)
     return ans
 
 def next_genre(sequence, freqs):
     target = {}
-    for g in lf_site.genres:
+    for g in freqs.keys():
         target[g] = (len(sequence) + 1) * -freqs[g]
     for s in sequence:
         target[s] += 1
     return pick_smallest(target.items())
 
-def generate_songs(freqs, duration, factory):
+def generate_songs(freqs, repel, duration, factory):
     '''
     Generate a sequence of a given length. Each element is one of the genres,
     and `freqs` gives the relative frequency of each genre. The frequencies
@@ -94,7 +93,8 @@ def generate_songs(freqs, duration, factory):
     Durations are in arbitrary time units, but seconds are recommended.
 
     :param freqs: a map from all genres to the relative frequency
-    :param float duration: desired total time of the playlist
+    :param repel: map from pairs of genres to a cost for placing them adjacent
+    :param numeric duration: desired total time of the playlist
     :param factory: an object that implements the following methods
 
         .. py:function:: get(genre):
@@ -117,7 +117,7 @@ def generate_songs(freqs, duration, factory):
     tfreq = sum(freqs.values())
     if tfreq <= 0.0:
         raise ValueError('Must have at least one non-zero frequency')
-    for g in lf_site.genres:
+    for g in freqs.keys():
         freqs[g] /= tfreq
 
     sequence = []
@@ -129,7 +129,7 @@ def generate_songs(freqs, duration, factory):
         scores = []
         for i in range(len(sequence) + 1):
             sequence.insert(i, g)
-            scores.append((i, score(sequence)))
+            scores.append((i, score(sequence, repel)))
             assert sequence[i] == g
             del sequence[i]
         place = pick_smallest(scores)
@@ -162,9 +162,11 @@ class TrivialFactory(object):
         return [song.genre]
 
 if __name__ == '__main__':
+    import lf_site
+
     freqs = {}
     for g in lf_site.genres:
         freqs[g] = random.uniform(0.8, 1.0)
-    songs = generate_songs(freqs, 50, TrivialFactory())
+    songs = generate_songs(freqs, lf_site.repel, 50, TrivialFactory())
     for g in songs:
         print(g.genre.name)

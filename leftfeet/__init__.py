@@ -23,40 +23,13 @@ import random
 import gettext
 import anydbm
 import time
+import sys
 
-import lf_site
 import generator
+__path__.insert(0, RB.user_data_dir())  # Allows user to override location
+import lf_site
 
 gettext.install('rhythmbox', RB.locale_dir())
-
-def get_genre(entry):
-    '''
-    Map an entry to its genre object
-
-    :returns: The matching genre, or `None` to skip the entry
-    :rtype: :py:class:`leftfeet.lf_site.Genre`
-    '''
-    name = entry.get_string(RB.RhythmDBPropType.GENRE)
-    name = lf_site.genre_aliases.get(name, name)
-    for genre in lf_site.genres:
-        if name == genre.name:
-            return genre
-
-def valid_song(entry, now):
-    '''
-    Determines whether this song should be a candidate. In theory
-    this should rather be done by using a RhythmDB query (much faster,
-    since it avoids reflecting everything back and forth through Python,
-    and may even be indexed), but I can't find any evidence that it is
-    actually possible to make this work in Python.
-    '''
-    rating = entry.get_double(RB.RhythmDBPropType.RATING)
-    if rating < 4:
-        return False
-    last_played = entry.get_ulong(RB.RhythmDBPropType.LAST_PLAYED)
-    if last_played > now - 43200:   # Last 12 hours
-        return False
-    return True
 
 class SongFactory(object):
     '''
@@ -71,8 +44,8 @@ class SongFactory(object):
             entry = lib.iter_to_entry(it)
             now = time.time() # Cache it for valid_song
             while entry:
-                if valid_song(entry, now):
-                    genre = get_genre(entry)
+                if lf_site.valid_song(entry, now):
+                    genre = lf_site.get_genre(entry)
                     if genre is not None:
                         self.songs[genre].append(entry)
                 entry = lib.get_next_from_entry(entry)
@@ -96,7 +69,7 @@ class SongFactory(object):
         if isinstance(entry, generator.TrivialSong):
             return [entry.genre]
         else:
-            return [get_genre(entry)]
+            return [lf_site.get_genre(entry)]
 
 class LeftFeetPlugin(GObject.Object, Peas.Activatable):
     '''
@@ -148,7 +121,7 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         freqs = {g: self.adjustments[g].get_value() for g in lf_site.genres}
         duration = int(self.duration_minutes.get_value() * 60)
         factory = SongFactory(shell)
-        songs = generator.generate_songs(freqs, duration, factory)
+        songs = generator.generate_songs(freqs, lf_site.repel, duration, factory)
         missing_genres = set()
         for song in songs:
             if isinstance(song, generator.TrivialSong):
