@@ -115,12 +115,26 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
 
         .. todo:: More intelligent random choice (consider star ratings etc)
         .. todo:: Avoid picking songs that have been played recently
+
+        :return: `True` if generation was successful, `False` to redisplay the dialog
         '''
         shell = self.object
         freqs = {g: self.adjustments[g].get_value() for g in lf_site.genres}
         duration = int(self.duration_minutes.get_value() * 60)
         factory = SongFactory(shell)
-        songs = generator.generate_songs(freqs, lf_site.repel, duration, factory)
+        try:
+            songs = generator.generate_songs(freqs, lf_site.repel, duration, factory)
+        except ValueError as e:
+            message = Gtk.MessageDialog(
+                    shell.props.window,
+                    Gtk.DialogFlags.DESTROY_WITH_PARENT | Gtk.DialogFlags.MODAL,
+                    Gtk.MessageType.ERROR,
+                    Gtk.ButtonsType.OK,
+                    str(e))
+            message.connect('response', lambda w, response: w.destroy())
+            message.run()
+            return False
+
         missing_genres = set()
         for song in songs:
             shell.props.queue_source.add_entry(song, -1)
@@ -130,19 +144,21 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
                 text += g.name + '\n'
             message = Gtk.MessageDialog(
                     shell.props.window,
-                    Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                    Gtk.DialogFlags.DESTROY_WITH_PARENT | Gtk.DialogFlags.MODAL,
                     Gtk.MessageType.WARNING,
                     Gtk.ButtonsType.OK,
                     text)
-            message.show()
             message.connect('response', lambda w, response: w.destroy())
+            message.run()
+        return True
 
     def generate_response(self, dialog, response):
         '''
         Handle a response to the *Generate playlist* dialog
         '''
         if response == Gtk.ResponseType.OK:
-            self.generate()
+            if not self.generate():
+                return
         self.adjustments = None
         self.duration_minutes = None
         dialog.destroy()
