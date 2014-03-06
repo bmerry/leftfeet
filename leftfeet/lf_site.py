@@ -91,8 +91,11 @@ genres = [
     Genre('viennese waltz', OPEN, BALLROOM, 1)
 ]
 
+genres_by_name = {g.name: g for g in genres}
+
 genre_aliases = {
-    'foxtrot, slow': 'foxtrot'
+    'foxtrot, slow': ['foxtrot'],
+    'quickstep, tango': ['quickstep', 'tango']
 }
 
 repel = {}
@@ -115,30 +118,37 @@ for i in genres:
             rep += 1
         repel[(i, j)] = rep
 
-def get_genre(entry, now):
+def valid_entry(entry, now):
     '''
-    Map an entry to its genre object. This is also where songs
-    are filtered to exclude ones that should not be played.
-
-    :param `RB.RhythmDB.Entry` entry: song to classify
-    :param now: cached value of :py:func:`time.time()`
-    :returns: The matching genre, or `None` to skip the entry
-    :rtype: :py:class:`Genre`
+    Determine whether this song should be considered.
+    :param `RB.RhythmDB.Entry` entry: song to test
+    :param now: cached value of :py:func`time.time()`
+    :rtype: boolean
     '''
-    from gi.repository import RB
-
     # Filtering
     rating = entry.get_double(RB.RhythmDBPropType.RATING)
     if rating < 4:
-        return None
+        return False
     last_played = entry.get_ulong(RB.RhythmDBPropType.LAST_PLAYED)
     if last_played > now - 43200:   # Last 12 hours
-        return None
+        return False
+    return True
+
+def get_genres(entry):
+    '''
+    Map an entry to its genres.
+
+    :param `RB.RhythmDB.Entry` entry: song to classify
+    :returns: The matching genres
+    :rtype: list of :py:class:`Genre`
+    '''
+    from gi.repository import RB
 
     name = entry.get_string(RB.RhythmDBPropType.GENRE)
-    name = genre_aliases.get(name, name)
-    for genre in genres:
-        if name == genre.name:
-            return genre
+    if name in genre_aliases:
+        names = genre_aliases: name
+    else:
+        names = [name]
+    return [genres_by_name[x] for x in names]
 
-__all__ = ['genres', 'repel', 'get_genre']
+__all__ = ['genres', 'repel', 'get_genres', 'valid_entry']

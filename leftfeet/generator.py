@@ -26,8 +26,7 @@ from the command line.
 
 The algorithm used is slightly odd. Rather than generating a list sequentially,
 appending each new choice to the end, songs are inserted into the middle of the
-list as it grows. In the description, however, we will refer to "songs" to
-mean specific instances of a genre rather than the genre itself.
+list as it grows.
 
 Firstly, there is scoring function for a sequence, based on the way electric
 charges work. Each pair of songs has an associated energy, which depends on
@@ -44,6 +43,11 @@ possibly with rounding) rather than arising stochastically. The new song is
 then inserted into the position that minimises the energy of the resulting
 playlist. When selecting a genre or a position, ties are broken randomly,
 which gives the playlist some random variation.
+
+Songs may also be classified as having multiple genres. When picking the next
+song, a single genre is chosen, and this single genre is used in evaluating
+frequency targets. However, the scoring function takes the maximum energy over
+all pairings.
 '''
 
 import random
@@ -72,22 +76,39 @@ def pick_smallest(kv):
             nbest += 1
     return best_key
 
+def repulsion(songs1, songs2, repel):
+    '''
+    Measures un-weighted repulsion force between two items.
+    :param list songs1: genres for first song
+    :param list songs2: genres for second song
+    :param dict repel: table of repulsion forces
+    '''
+    ans = 0
+    for g1 in songs1:
+        for g2 in songs2:
+            ans = max(ans, repel[(g1, g2)])
+    return ans
+
 def score_single(sequence, repel, pos):
     '''
     Computes the portion of the heuristic due to a single item.
+
+    :param list sequence: list of genres for each song in playlist
+    :param dict repel: table of repulsion forces
+    :param int pos: position of item to evaluate
     '''
     ans = 0
     for i in range(max(0, pos - WINDOW), pos):
-        ans += repel[(sequence[i], sequence[pos])] * weights[pos - i]
+        ans += repulsion(sequence[i], sequence[pos], repel) * weights[pos - i]
     for i in range(pos + 1, min(pos + WINDOW + 1, len(sequence))):
-        ans += repel[(sequence[pos], sequence[i])] * weights[i - pos]
+        ans += repulsion(sequence[pos], sequence[i], repel) * weights[i - pos]
     return ans
 
 def score_pair(sequence, repel, pos):
     '''
     Computes the portion of the heuristic due to two adjacent elements.
     '''
-    ans = -(repel[(sequence[pos], sequence[pos + 1])] * weights[1]) # Inclusion-exclusion
+    ans = -(repulsion(sequence[pos], sequence[pos + 1], repel) * weights[1]) # Inclusion-exclusion
     ans += score_single(sequence, repel, pos)
     ans += score_single(sequence, repel, pos + 1)
     return ans
@@ -100,16 +121,13 @@ def score(sequence, repel):
     ans = 0
     for i in range(1, len(sequence)):
         for j in range(max(0, i - WINDOW), i):
-            ans += repel[(sequence[j], sequence[i])] * weights[i - j]
+            ans += repulsion(sequence[j], sequence[i], repel) * weights[i - j]
     return ans
 
-def next_genre(sequence, freqs):
+def next_genre(N, seen, freqs):
     target = {}
-    for g in freqs.keys():
-        target[g] = (len(sequence) + 1) * -freqs[g]
-    for s in sequence:
-        if s in freqs:
-            target[s] += 1
+    for g in freqs:
+        target[g] = seen.get(g, 0) - (N + 1) * freqs[g]
     return pick_smallest(target.items())
 
 def generate_songs(freqs, repel, duration, factory):
@@ -148,20 +166,25 @@ def generate_songs(freqs, repel, duration, factory):
         raise ValueError('Must have at least one non-zero frequency')
     for g in freqs.keys():
         freqs[g] /= tfreq
+    seen = {g: 0 for g in freqs}
 
     sequence = []
     songs = []
     current_duration = 0
     while current_duration < duration and freqs:
-        g = next_genre(sequence, freqs)
+        g = next_genre(len(sequence), seen, freqs)
         song = factory.get(g)
         if song is None:
             # Exhausted that genre
             del freqs[g]
             continue
+        seen[g] += 1
+
+        # g is a list from here on
+        g = factory.get_genres(song)
         sequence.insert(0, g)
         cur_score = 0   # Was score(sequence, repel), but only deltas matter
-        scores = [(0, cur_score)]
+        scores = [cur_score]
         for i in range(len(sequence) - 1):
             # Subtract old relative values
             cur_score -= score_pair(sequence, repel, i)
@@ -169,10 +192,10 @@ def generate_songs(freqs, repel, duration, factory):
             sequence[i], sequence[i + 1] = sequence[i + 1], sequence[i]
             # Add new relative values
             cur_score += score_pair(sequence, repel, i)
-            scores.append((i, cur_score))
+            scores.append(cur_score)
         sequence.pop() # Remove the temporarily added new genre
 
-        place = pick_smallest(scores)
+        place = pick_smallest(enumerate(scores))
         sequence.insert(place, g)
         songs.insert(place, song)
         current_duration += factory.get_duration(song)
@@ -202,7 +225,7 @@ class TrivialFactory(object):
         return [song.genre]
 
 if __name__ == '__main__':
-    from . import lf_site
+    import lf_site
 
     freqs = {}
     for g in lf_site.genres:

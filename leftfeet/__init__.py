@@ -18,7 +18,7 @@
 This is the module that interacts with the Rhythmbox plugin API.
 '''
 
-from gi.repository import GObject, Gio, Gtk, RB, Peas
+from gi.repository import GObject, GLib, Gio, Gtk, RB, Peas
 import random
 import gettext
 import anydbm
@@ -46,18 +46,20 @@ class SongFactory(object):
         it = lib.get_iter_first()
         if it is not None:
             entry = lib.iter_to_entry(it)
-            now = time.time() # Cache it for get_genre
+            now = time.time() # Cache it for valid_entry
             while entry:
-                genre = lf_site.get_genre(entry, now)
-                if genre is not None:
-                    self.songs[genre].append(entry)
+                if lf_site.valid_entry(entry, now):
+                    genres = lf_site.get_genres(entry)
+                    for g in genres:
+                        self.songs[g].append(entry)
                 entry = lib.get_next_from_entry(entry)
 
     def get(self, genre):
         if genre in self.songs and self.songs[genre]:
             entry = random.choice(self.songs[genre])
-            # Avoid picking it again
-            self.songs[genre].remove(entry)
+            # Avoid picking it again (TODO: use an index to speed this up)
+            for g in self.get_genres(entry):
+                self.songs[g].remove(entry)
             return entry
         else:
             self.missing.append(genre)
@@ -67,7 +69,7 @@ class SongFactory(object):
         return entry.get_ulong(RB.RhythmDBPropType.DURATION)
 
     def get_genres(self, entry):
-        return [lf_site.get_genre(entry)]
+        return lf_site.get_genres(entry)
 
 class ConfigDialog(Gtk.Dialog):
     '''
@@ -219,6 +221,48 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
                     done = False
         dialog.destroy()
 
+    @classmethod
+    def play_queue_data_func(cls, cell_layout, cell, model, it, data):
+        entry = model.get_value(it, 0)
+
+        title = entry.get_string(RB.RhythmDBPropType.TITLE)
+        genre = entry.get_string(RB.RhythmDBPropType.GENRE)
+
+        markup = '{title}\n<span size="smaller">{genre}</span>'.format(
+            title = GLib.markup_escape_text(title),
+            genre = GLib.markup_escape_text(genre))
+
+        cell.props.markup = markup
+
+    def replace_sidebar(self):
+        shell = self.object
+        queue = shell.props.queue_source
+        view = queue.props.sidebar
+        treeview = view.get_child()
+        column = treeview.get_column(1)
+
+        column.get_cells()[0].set_visible(False)
+
+        # This is just translating what the Rhythmbox C code does
+        renderer = Gtk.CellRendererText()
+        column.pack_end(renderer, True)
+        column.set_cell_data_func(renderer, self.play_queue_data_func)
+
+    def restore_sidebar(self):
+        shell = self.object
+        queue = shell.props.queue_source
+        view = queue.props.sidebar
+        treeview = view.get_child()
+        column = treeview.get_column(1)
+
+        cells = column.get_cells()
+        renderer = cells[1]
+        column.clear_attributes(renderer)
+        column.set_cell_data_func(renderer, None)
+        renderer.set_visible(False)
+        cells[0].set_visible(True)
+        print(len(column.get_cells()))
+
     def do_activate(self):
         '''
         Plugin activation
@@ -235,6 +279,8 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
 
         self.settings = anydbm.open(RB.find_user_data_file('leftfeet.db'), 'c')
 
+        # self.replace_sidebar()
+
     def do_deactivate(self):
         '''
         Plugin deactivation
@@ -243,5 +289,6 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         app = shell.props.application
 
         self.settings.close()
+        # self.restore_sidebar()
         app.remove_plugin_menu_item('tools', 'leftfeet-generate')
         app.remove_action('leftfeet-generate')
