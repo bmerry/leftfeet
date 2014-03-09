@@ -146,7 +146,7 @@ def get_genres(entry):
 
     name = entry.get_string(RB.RhythmDBPropType.GENRE)
     if name in genre_aliases:
-        names = genre_aliases: name
+        names = genre_aliases[name]
     else:
         names = [name]
     return [genres_by_name[x] for x in names]
