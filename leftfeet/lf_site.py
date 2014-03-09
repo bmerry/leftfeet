@@ -125,6 +125,8 @@ def valid_entry(entry, now):
     :param now: cached value of :py:func`time.time()`
     :rtype: boolean
     '''
+    from gi.repository import RB
+
     # Filtering
     rating = entry.get_double(RB.RhythmDBPropType.RATING)
     if rating < 4:
@@ -149,6 +151,6 @@ def get_genres(entry):
         names = genre_aliases[name]
     else:
         names = [name]
-    return [genres_by_name[x] for x in names]
+    return [genres_by_name[x] for x in names if x in genres_by_name]
 
 __all__ = ['genres', 'repel', 'get_genres', 'valid_entry']
