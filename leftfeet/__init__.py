@@ -43,16 +43,18 @@ class SongFactory(object):
         self.missing = []
 
         lib = shell.props.library_source.props.base_query_model
-        it = lib.get_iter_first()
-        if it is not None:
-            entry = lib.iter_to_entry(it)
-            now = time.time() # Cache it for valid_entry
-            while entry:
+        queue = shell.props.queue_source.props.base_query_model
+        now = time.time() # Cache it for valid_entry
+
+        for row in lib:
+            entry = row[0]
+            # Avoid anything in the play queue
+            it = Gtk.TreeIter()
+            if not queue.entry_to_iter(entry, it):
                 if lf_site.valid_entry(entry, now):
                     genres = lf_site.get_genres(entry)
                     for g in genres:
                         self.songs[g].append(entry)
-                entry = lib.get_next_from_entry(entry)
 
     def get(self, genre):
         if genre in self.songs and self.songs[genre]:
@@ -172,9 +174,11 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         :return: `True` if generation was successful, `False` to redisplay the dialog
         '''
         shell = self.object
+        queue = shell.props.queue_source.props.base_query_model
+        prefix = [row[0] for row in queue]
         factory = SongFactory(shell)
         try:
-            songs = generator.generate_songs(freqs, lf_site.repel, duration, factory)
+            songs = generator.generate_songs(freqs, lf_site.repel, duration, factory, prefix)
         except ValueError as e:
             message = Gtk.MessageDialog(
                     shell.props.window,
