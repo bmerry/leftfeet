@@ -130,7 +130,7 @@ def next_genre(N, seen, freqs):
         target[g] = seen.get(g, 0) - (N + 1) * freqs[g]
     return pick_smallest(target.items())
 
-def generate_songs(freqs, repel, duration, factory):
+def generate_songs(freqs, repel, duration, factory, prefix = []):
     '''
     Generate a sequence of a given length. Each element is one of the genres,
     and `freqs` gives the relative frequency of each genre. The frequencies
@@ -156,6 +156,8 @@ def generate_songs(freqs, repel, duration, factory):
 
            Return the genres corresponding to a song returned by :py:func:`get`.
 
+    :param prefix: sequence of songs already in the play queue
+
     :raise ValueError: if the sum of frequencies is not positive
     '''
 
@@ -168,7 +170,8 @@ def generate_songs(freqs, repel, duration, factory):
         freqs[g] /= tfreq
     seen = {g: 0 for g in freqs}
 
-    sequence = []
+    sequence = [factory.get_genres(x) for x in prefix]
+    prefix_len = len(sequence)
     songs = []
     current_duration = 0
     while current_duration < duration and freqs:
@@ -182,10 +185,10 @@ def generate_songs(freqs, repel, duration, factory):
 
         # g is a list from here on
         g = factory.get_genres(song)
-        sequence.insert(0, g)
+        sequence.insert(prefix_len, g) # Insert right after the prefix
         cur_score = 0   # Was score(sequence, repel), but only deltas matter
         scores = [cur_score]
-        for i in range(len(sequence) - 1):
+        for i in range(prefix_len, len(sequence) - 1):
             # Subtract old relative values
             cur_score -= score_pair(sequence, repel, i)
             # Swap new item along one
@@ -196,7 +199,7 @@ def generate_songs(freqs, repel, duration, factory):
         sequence.pop() # Remove the temporarily added new genre
 
         place = pick_smallest(enumerate(scores))
-        sequence.insert(place, g)
+        sequence.insert(place + prefix_len, g)
         songs.insert(place, song)
         current_duration += factory.get_duration(song)
     return songs
@@ -230,8 +233,12 @@ if __name__ == '__main__':
     freqs = {}
     for g in lf_site.genres:
         freqs[g] = random.uniform(0.8, 1.0)
-    songs = generate_songs(freqs, lf_site.repel, 50, TrivialFactory())
+    songs = generate_songs(freqs, lf_site.repel, 25, TrivialFactory())
     for g in songs:
+        print(g.genre.name)
+    print('########')
+    songs2 = generate_songs(freqs, lf_site.repel, 25, TrivialFactory(), songs)
+    for g in songs2:
         print(g.genre.name)
 
 __all__ = ['generate_songs']
