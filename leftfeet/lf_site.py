@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# LeftFeet: generates a Rhythmbox playlist for social dancing
+# LeftFeet: generates a Rhythmbox play queue for social dancing
 # Copyright (C) 2014  Bruce Merry <bmerry@users.sourceforge.net>
 #
 # This file (and ONLY this file) is distributed under the following terms, in

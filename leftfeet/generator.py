@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# LeftFeet: generates a Rhythmbox playlist for social dancing
+# LeftFeet: generates a Rhythmbox play queue for social dancing
 # Copyright (C) 2014  Bruce Merry <bmerry@users.sourceforge.net>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -41,8 +41,8 @@ song is the one that is further behind the expected number of plays based on
 its desired frequency. The frequency goals are thus met exactly (to the extent
 possibly with rounding) rather than arising stochastically. The new song is
 then inserted into the position that minimises the energy of the resulting
-playlist. When selecting a genre or a position, ties are broken randomly,
-which gives the playlist some random variation.
+list. When selecting a genre or a position, ties are broken randomly,
+which gives the list some random variation.
 
 Songs may also be classified as having multiple genres. When picking the next
 song, a single genre is chosen, and this single genre is used in evaluating
@@ -93,7 +93,7 @@ def score_single(sequence, repel, pos):
     '''
     Computes the portion of the heuristic due to a single item.
 
-    :param list sequence: list of genres for each song in playlist
+    :param list sequence: list of genres for each song in list
     :param dict repel: table of repulsion forces
     :param int pos: position of item to evaluate
     '''
@@ -140,7 +140,7 @@ def generate_songs(freqs, repel, duration, factory, prefix = []):
 
     :param freqs: a map from all genres to the relative frequency
     :param repel: map from pairs of genres to a cost for placing them adjacent
-    :param numeric duration: desired total time of the playlist
+    :param numeric duration: desired total time of the list
     :param factory: an object that implements the following methods
 
         .. py:function:: get(genre):

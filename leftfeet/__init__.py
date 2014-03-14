@@ -1,4 +1,4 @@
-# LeftFeet: generates a Rhythmbox playlist for social dancing
+# LeftFeet: generates a Rhythmbox play queue for social dancing
 # Copyright (C) 2014  Bruce Merry <bmerry@users.sourceforge.net>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -176,7 +176,7 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
 
     def generate(self, freqs, duration):
         '''
-        Generate the list of songs and enqueue them to the playlist.
+        Generate the list of songs and enqueue them to the play queue.
 
         .. todo:: More intelligent random choice (consider star ratings etc)
         .. todo:: Avoid picking songs that have been played recently
@@ -221,7 +221,7 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
 
     def generate_action(self, action, parameter, shell):
         '''
-        Display the *Generate playlist* dialog and handle the response.
+        Display the *Generate play queue* dialog and handle the response.
         '''
         shell = self.object
         dialog = ConfigDialog(shell.props.window, self.settings)
@@ -265,14 +265,14 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
             app.add_action(action)
 
             app.add_plugin_menu_item('tools', 'leftfeet-generate',
-                    Gio.MenuItem.new(label = _("Generate playlist"), detailed_action = 'app.leftfeet-generate'))
+                    Gio.MenuItem.new(label = _("Generate play queue"), detailed_action = 'app.leftfeet-generate'))
         else:
             # Rhythmbox 2.96
             manager = shell.props.ui_manager
             action_group = Gtk.ActionGroup(name = 'LeftFeetActions')
             action = Gtk.Action(name = 'leftfeet-generate',
-                label = _('Generate playlist'),
-                tooltip = _('Generate a playlist with LeftFeet'),
+                label = _('Generate play queue'),
+                tooltip = _('Generate a play queue with LeftFeet'),
                 stock_id = None)
             action.connect('activate', self.generate_action, None, shell)
             action_group.add_action(action)

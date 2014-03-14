@@ -1,14 +1,17 @@
 LeftFeet
 ========
 
-LeftFeet is a Rhythmbox plugin that generates a playlist from the library. It
+LeftFeet is a Rhythmbox plugin that generates a play queue from the library. It
 is designed specifically for a ballroom/Latin dancing society, but could be
-adapted to other purposes.
+adapted to other purposes. Unlike a simple random generator, it tries to spread
+out genres that are in some way similar according to site-specific criteria.
 
 Installation
 ------------
-Simply copy the entire directory tree to the Rhythmbox plugins directory. For
-a local user on a UNIX-like system, this is ~/.local/share/rhythmbox/plugins.
+Simply copy the entire directory tree to a subdirectory within the Rhythmbox
+plugins directory. For a local user on a UNIX-like system, this is
+~/.local/share/rhythmbox/plugins. One can of course also git clone the
+repository directly to where it will be used.
 
 Configuration
 -------------
@@ -20,9 +23,23 @@ library and requirements, copy this file to the user data directory (for example
 Usage
 -----
 After installing the plugin and activating it within Rhythmbox, an extra
-*Generate playlist* item appears on the *Tools* menu. When you select it, a
+*Generate play queue* item appears on the *Tools* menu. When you select it, a
 window appears with a slider for each genre. Adjust the sliders to specify the
-relative frequency of each genre, then click *OK* to generate the playlist.
+relative frequency of each genre, then click *OK* to generate the play queue.
+You can also change the length of time for the generated queue.
+
+## Tips ##
+- The existing queue is not replaced. Instead, new songs are appended to the
+  queue. If you want to replace the queue, clear it first.
+- Any existing songs in the play queue are taken into account when deciding the
+  order of new songs. Thus, one can hand-pick a few songs to start with before
+  adding more with this plugin, and the first generated songs will fit in. This
+  should give better results than first generating a queue and then adding
+  songs at the front.
+- For best results, don't set the duration too low, as then the ratios won't be
+  matched. For example, if you select a mix with 5% Tango but generate only 10
+  songs, there will be no Tango at all, not matter how often you add another 10
+  songs.
 
 License
 -------
