@@ -277,8 +277,10 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
             action.connect('activate', self.generate_action, None, shell)
             action_group.add_action(action)
             manager.insert_action_group(action_group, 0)
-            manager.add_ui_from_string(ui_str)
+            ui_id = manager.add_ui_from_string(ui_str)
             manager.ensure_update()
+
+            shell.set_data('leftfeet', {'ui_id': ui_id, 'action_group': action_group})
 
         self.settings = anydbm.open(RB.find_user_data_file('leftfeet.db'), 'c')
 
@@ -287,8 +289,18 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         Plugin deactivation
         '''
         shell = self.object
-        app = shell.props.application
+        if hasattr(shell.props, 'application'):
+            # Newer Rhythmbox
+            app = shell.props.application
+            app.remove_plugin_menu_item('tools', 'leftfeet-generate')
+            app.remove_action('leftfeet-generate')
+        else:
+            # Rhythmbox 2.96
+            data = shell.get_data('leftfeet')
+            manager = shell.props.ui_manager
+            manager.remove_ui(data['ui_id'])
+            manager.remove_action_group(data['action_group'])
+            manager.ensure_update()
+            shell.set_data('leftfeet', None)
 
         self.settings.close()
-        app.remove_plugin_menu_item('tools', 'leftfeet-generate')
-        app.remove_action('leftfeet-generate')
