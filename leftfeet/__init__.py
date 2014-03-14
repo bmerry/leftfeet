@@ -31,6 +31,18 @@ from . import lf_site
 
 gettext.install('rhythmbox', RB.locale_dir())
 
+ui_str = """
+<ui>
+  <menubar name="MenuBar">
+    <menu name="ToolsMenu" action="Tools">
+      <placeholder name="ToolsOps_5">
+        <menuitem name="leftfeet-generate" action="leftfeet-generate"/>
+      </placeholder>
+    </menu>
+  </menubar>
+</ui>
+"""
+
 class SongFactory(object):
     '''
     Provides the factory for :py:func:`generator.generate_songs`.
@@ -243,14 +255,30 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
         Plugin activation
         '''
         shell = self.object
-        app = shell.props.application
 
-        action = Gio.SimpleAction.new("leftfeet-generate", None)
-        action.connect('activate', self.generate_action, shell)
-        app.add_action(action)
+        if hasattr(shell.props, 'application'):
+            # Newer Rhythmbox
+            app = shell.props.application
 
-        app.add_plugin_menu_item('tools', 'leftfeet-generate',
-                Gio.MenuItem.new(label = _("Generate playlist"), detailed_action = 'app.leftfeet-generate'))
+            action = Gio.SimpleAction.new("leftfeet-generate", None)
+            action.connect('activate', self.generate_action, shell)
+            app.add_action(action)
+
+            app.add_plugin_menu_item('tools', 'leftfeet-generate',
+                    Gio.MenuItem.new(label = _("Generate playlist"), detailed_action = 'app.leftfeet-generate'))
+        else:
+            # Rhythmbox 2.96
+            manager = shell.props.ui_manager
+            action_group = Gtk.ActionGroup(name = 'LeftFeetActions')
+            action = Gtk.Action(name = 'leftfeet-generate',
+                label = _('Generate playlist'),
+                tooltip = _('Generate a playlist with LeftFeet'),
+                stock_id = None)
+            action.connect('activate', self.generate_action, None, shell)
+            action_group.add_action(action)
+            manager.insert_action_group(action_group, 0)
+            manager.add_ui_from_string(ui_str)
+            manager.ensure_update()
 
         self.settings = anydbm.open(RB.find_user_data_file('leftfeet.db'), 'c')
 
