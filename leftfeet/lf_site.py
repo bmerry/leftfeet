@@ -94,8 +94,19 @@ genres = [
 genres_by_name = {g.name: g for g in genres}
 
 genre_aliases = {
+    'boogie, cha-cha': ['boogie', 'cha-cha'],
+    'Boogie, salsa?': ['boogie', 'salsa'],
+    'boogie, sokkie': ['boogie', 'sokkie'],
     'foxtrot, slow': ['foxtrot'],
-    'quickstep, tango': ['quickstep', 'tango']
+    'jive, slow': ['jive'],
+    'Quickstep': ['quickstep'],
+    'Quickstep, boogie': ['quickstep', 'boogie'],
+    'quickstep, tango': ['quickstep', 'tango'],
+    'Rumba': ['rumba'],
+    'Tango, Argentine': ['tango'],
+    'Tango, International': ['tango'],
+    'viennese': ['viennese waltz'],
+    'waltz, viennese': ['viennese waltz']
 }
 
 repel = {}
