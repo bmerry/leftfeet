@@ -142,9 +142,16 @@ def valid_entry(entry, now):
     rating = entry.get_double(RB.RhythmDBPropType.RATING)
     if rating < 4:
         return False
+
     last_played = entry.get_ulong(RB.RhythmDBPropType.LAST_PLAYED)
     if last_played > now - 43200:   # Last 12 hours
         return False
+
+    if not entry.is_lossless():
+        quality = entry.get_ulong(RB.RhythmDBPropType.BITRATE)
+        if quality is None or quality < 128:
+            return False
+
     return True
 
 def get_genres(entry):
