@@ -38,18 +38,9 @@ Contains site-local configuration of the available genres.
 
 .. todo:: Resolve the following questions
 
-  - Should Tango and Argentine Tango be classified separately?
-  - Should Slow Fox be split out?
   - Should Viennese Waltz be classed as open?
-  - Should Samba and Salsa be classed as similar
-  - Should line dances be handled here at all?
-  - Any other genres (Paso Doble?)
-  - Are there special rules for the start (beginner-friendly?) and end (waltz?)
-  - How should songs be picked within a genre (time since last use, star ratings)?
-  - How should multi-genre songs be handled?
-  - Should low-rated songs be picked randomly (but less often), or just not at all?
-  - How many entries should be made? Specify a count or duration?
-  - How should frequencies be set? Per genre or at a higher level?
+  - Should Samba and Salsa be classed as similar?
+  - Should there be any weighting of random choices by star rating?
   - What settings should be presented in the plugin? Should they pop up on use or just be plugin settings?
 '''
 
