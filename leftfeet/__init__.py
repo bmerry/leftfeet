@@ -19,11 +19,15 @@ This is the module that interacts with the Rhythmbox plugin API.
 '''
 
 from gi.repository import GObject, GLib, Gio, Gtk, RB, Peas
+import sys
 import random
 import gettext
-import anydbm
+# Python 3 renamed anydbm to dbm
+if sys.version_info.major >= 3:
+    import dbm
+else:
+    import anydbm as dbm
 import time
-import sys
 
 from . import generator
 __path__.insert(0, RB.user_data_dir())  # Allows user to override location
@@ -282,7 +286,7 @@ class LeftFeetPlugin(GObject.Object, Peas.Activatable):
 
             shell.set_data('leftfeet', {'ui_id': ui_id, 'action_group': action_group})
 
-        self.settings = anydbm.open(RB.find_user_data_file('leftfeet.db'), 'c')
+        self.settings = dbm.open(RB.find_user_data_file('leftfeet.db'), 'c')
 
     def do_deactivate(self):
         '''

@@ -13,6 +13,10 @@ plugins directory. For a local user on a UNIX-like system, this is
 ~/.local/share/rhythmbox/plugins. One can of course also git clone the
 repository directly to where it will be used.
 
+If you are using Rhythmbox 3 or later, you must edit
+[leftfeet.plugin](leftfeet.plugin) to change the line `Loader=python` to
+`Loader=python3`.
+
 Configuration
 -------------
 The set of genres is hard-coded into
