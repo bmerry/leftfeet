@@ -43,6 +43,8 @@ Contains site-local configuration of the available genres.
   - Should there be any weighting of random choices by star rating?
   - What settings should be presented in the plugin? Should they pop up on use or just be plugin settings?
 '''
+MIN_STARS = 2
+MIN_BITRATE = 128
 
 OPEN = -1
 BEGINNER = 0
@@ -71,7 +73,7 @@ genres = [
     Genre('foxtrot', BEGINNER, BALLROOM),
     Genre('waltz', BEGINNER, BALLROOM),
     Genre('quickstep', INTERMEDIATE, BALLROOM, 1),
-    Genre('tango', ADVANCED, BALLROOM),
+    Genre('tango, international', ADVANCED, BALLROOM),
     Genre('cha-cha', BEGINNER, LATIN),
     Genre('jive', BEGINNER, LATIN, 1),
     Genre('rumba', INTERMEDIATE, LATIN),
@@ -86,16 +88,13 @@ genres_by_name = {g.name: g for g in genres}
 
 genre_aliases = {
     'boogie, cha-cha': ['boogie', 'cha-cha'],
-    'Boogie, salsa?': ['boogie', 'salsa'],
+    'boogie, salsa?': ['boogie', 'salsa'],
     'boogie, sokkie': ['boogie', 'sokkie'],
     'foxtrot, slow': ['foxtrot'],
     'jive, slow': ['jive'],
-    'Quickstep': ['quickstep'],
-    'Quickstep, boogie': ['quickstep', 'boogie'],
+    'quickstep, boogie': ['quickstep', 'boogie'],
     'quickstep, tango': ['quickstep', 'tango'],
-    'Rumba': ['rumba'],
-    'Tango, Argentine': ['tango'],
-    'Tango, International': ['tango'],
+    'rumba': ['rumba'],
     'viennese': ['viennese waltz'],
     'waltz, viennese': ['viennese waltz']
 }
@@ -131,7 +130,7 @@ def valid_entry(entry, now):
 
     # Filtering
     rating = entry.get_double(RB.RhythmDBPropType.RATING)
-    if rating < 4:
+    if rating < MIN_STARS:
         return False
 
     last_played = entry.get_ulong(RB.RhythmDBPropType.LAST_PLAYED)
@@ -140,7 +139,7 @@ def valid_entry(entry, now):
 
     if not entry.is_lossless():
         quality = entry.get_ulong(RB.RhythmDBPropType.BITRATE)
-        if quality is None or quality < 128:
+        if quality is None or quality < MIN_BITRATE:
             return False
 
     return True
@@ -155,7 +154,7 @@ def get_genres(entry):
     '''
     from gi.repository import RB
 
-    name = entry.get_string(RB.RhythmDBPropType.GENRE)
+    name = entry.get_string(RB.RhythmDBPropType.GENRE).lower()
     if name in genre_aliases:
         names = genre_aliases[name]
     else:
