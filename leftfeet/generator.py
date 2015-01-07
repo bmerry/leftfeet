@@ -215,7 +215,7 @@ class TrivialSong(object):
 class TrivialFactory(object):
     '''
     Trivial implementation of the factory concept for :py:func:`generate_songs`.
-    It presents songs simple as a wrapper around the genre object
+    It presents songs simply as a wrapper around the genre object.
     '''
 
     def get(self, genre):
@@ -229,16 +229,30 @@ class TrivialFactory(object):
 
 if __name__ == '__main__':
     import lf_site
+    import argparse
+    from collections import Counter
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-N', type=int, default=40, help='number of songs to generate')
+    parser.add_argument('--stats', action='store_true', help='report stats instead of play queue')
+    args = parser.parse_args()
 
     freqs = {}
+    rs = random.Random()
+    rs.seed(1)
     for g in lf_site.genres:
-        freqs[g] = random.uniform(0.8, 1.0)
-    songs = generate_songs(freqs, lf_site.repel, 25, TrivialFactory())
-    for g in songs:
-        print(g.genre.name)
-    print('########')
-    songs2 = generate_songs(freqs, lf_site.repel, 25, TrivialFactory(), songs)
-    for g in songs2:
-        print(g.genre.name)
+        freqs[g] = rs.uniform(0.1, 1.0)
+    songs = generate_songs(freqs, lf_site.repel, args.N, TrivialFactory())
+    if args.stats:
+        actual = Counter()
+        freq_total = sum(freqs.values())
+        for g in songs:
+            actual[g.genre] += 1
+        for g in lf_site.genres:
+            expected = args.N * freqs[g] / freq_total
+            print("{}: {} / {:.2f}".format(g, actual[g], expected))
+    else:
+        for g in songs:
+            print(g.genre.name)
 
 __all__ = ['generate_songs']
